@@ -1,9 +1,9 @@
 # JetiLua
-Jeti Lua Applications for Speed Freaks and Geeks
+Jeti Lua Applications for Speed Freaks and Geeks. To download click on the "Clone or download" button and then click "Download Zip"
 
 MHSFAApp
 ------
-![alt text](https://github.com/AlCormack/JetiLua/blob/master/images/SpeedDisplay.bmp "MHSFAApp")
+![alt text](https://github.com/AlCormack/JetiLua/blob/master/images/SpeedDisplay.jpg "MHSFAApp")
 Some speed pilots have been setting alarms on their Jeti Tx’s to use the GPS Distance measure provided by a GPS such as the PowerBox GPS Sensor II as a way of telling when you go into the course and out and looking at the data after the flight to get a rough idea of the average speed. With the advent of Jeti’s latest transmitter firmware they have added the capability to make applications that can use the telemetry going to the transmitter and do cool things with it! Enter the MHSFA Course alarm application for Jeti. The application allows you to enter course details, either the MHSFA ones or ones of your own choosing and then it warns you when you enter the course, go in and out of the pre-stage and reads out the average speed when you have left the course on each pass. It will also store the fastest of each pass in each direction.
 
 
