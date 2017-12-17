@@ -1,8 +1,8 @@
 # JetiLua
 Jeti Lua Applications for Speed Freaks and Geeks. To download click on the "Clone or download" button and then click "Download Zip"
 
-17th Oct 2017 - Rev 0 : Initial Release
-17th Dec 2017 - Rev 1 : Updated user Manual to correct the variable that should be selecter for Headspeed siaply on the transmitter.
+* 17th Oct 2017 - Rev 0 : Initial Release
+* 17th Dec 2017 - Rev 1 : Updated user Manual to correct the variable that should be selecter for Headspeed siaply on the transmitter.
 
 MHSFAApp
 ------
