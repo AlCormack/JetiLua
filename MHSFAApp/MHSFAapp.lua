@@ -4,6 +4,8 @@
     speed pilot using the MHSFA rules.
     
     (c) Alastair Cormack - alastair.cormack@gmail.com
+    
+    Ver 1.1 - 22nd Dec 2017 - Added in average speed and corrected title of displayed telemetry
 
 --]]
 collectgarbage()
@@ -46,7 +48,9 @@ end
 ----------------------------------------------------------------------
 -- Draw the telemetry windows
 local function printTelemetry()
+    local strAv = string.format("- %dav -", (maxA + maxB)/2.0)
     lcd.drawText(3,0,string.format("%d", maxB),FONT_BIG)
+    lcd.drawText((145 / 2) - (lcd.getTextWidth(FONT_BIG,strAv) / 2.0),0,strAv,FONT_BIG)
     lcd.drawText(145 - lcd.getTextWidth(FONT_BIG,string.format("%d", maxA)),0,string.format("%d", maxA),FONT_BIG)
 end
 ----------------------------------------------------------------------
@@ -402,7 +406,7 @@ local function init()
 	maxA = 0
   maxB = 0
   
-	system.registerTelemetry(1,"MHSFA Passes (kp/h)",0,printTelemetry)
+	system.registerTelemetry(1,"MHSFA Passes (km/h)",0,printTelemetry)
 	
 	speedtotal  = 0
   speedcounter = 0
