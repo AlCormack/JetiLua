@@ -1,10 +1,6 @@
 # JetiLua
 Jeti Lua Applications for Speed Freaks and Geeks. To download click on the "Clone or download" button and then click "Download Zip"
 
-* 17th Oct 2017 - Rev 0 : Initial Release.
-* 17th Dec 2017 - Rev 1 : Updated user Manual to correct the variable that should be selected for Headspeed display on the transmitter.
-* 22nd Dec 2017 - Rev 2 : Added notes about not starting logging of both jeti data and headspeed at the same time. Added average speed to MHSFAApp display.
-
 MHSFAApp
 ------
 ![alt text](https://github.com/AlCormack/JetiLua/blob/master/images/SpeedDisplay.jpg "MHSFAApp")
