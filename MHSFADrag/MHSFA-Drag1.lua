@@ -206,7 +206,7 @@ local function init()
 	speedid = system.pLoad("spdid",0)
 	speedparam = system.pLoad("spdparam",0)
   
-	courseLength = system.pLoad("courseLength",50)
+	courseLength = system.pLoad("courseLength",100)
 	startAudio = system.pLoad("startAudio","")
 	switch = system.pLoad("switch")
 	
