@@ -7,6 +7,7 @@
     
     Ver 1.1 - 22nd Dec 2017 - Added in average speed and corrected title of displayed telemetry
     Ver 1.2 - 2nd Apr 2018 - Updated to add support for native Jeti logging
+    Ver 1.3 - 14th April 2018 - Allowed faster update rate and fixed average pass logging
 
 --]]
 collectgarbage()
@@ -31,6 +32,7 @@ local speedtotal
 local speedcounter
 local maxA, maxB, blnDonePassA -- keeps track of pass in direction a or b (can't do left or right as dont have heading)
 local diveEnterCourseHeight
+local avgspeed
 
 local tmp
 
@@ -289,7 +291,7 @@ local function loop()
   
   
 	
-	if (delta >= 200) then -- want a 5hz cycle here as not going to get gps fixes any faster and can use this for avg speed
+	if (delta >= 100) then -- want a 10hz cycle here as not going to get gps fixes any faster and can use this for avg speed
 	   lastTime = newTime
 	   local distsensor = system.getSensorByID(id, param)
 	   local speedsensor = system.getSensorByID(speedid, speedparam)
@@ -310,7 +312,7 @@ local function loop()
                 if ((outcourseALM) and (blnOutCourse == false)) then
                     --check we have some values to play the average speed
                     if ((speedtotal > 0) and (speedcounter > 0)) then 
-                        local avgspeed = speedtotal / speedcounter
+                        avgspeed = speedtotal / speedcounter
                         system.playNumber (avgspeed, 0, "km/h")
                         --print(avgspeed)
                         speedcounter = 0
@@ -430,6 +432,6 @@ local function init()
 end
 ----------------------------------------------------------------------
 --setLanguage()
-MHSFAVersion = "1.2"
+MHSFAVersion = "1.3"
 collectgarbage()
-return {init=init, loop=loop, author="AlastairC", version="1.2", name="MHSFACourse"}
+return {init=init, loop=loop, author="AlastairC", version="1.3", name="MHSFACourse"}
