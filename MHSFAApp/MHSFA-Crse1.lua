@@ -8,16 +8,20 @@
     Ver 1.1 - 22nd Dec 2017 - Added in average speed and corrected title of displayed telemetry
     Ver 1.2 - 2nd Apr 2018 - Updated to add support for native Jeti logging
     Ver 1.3 - 14th April 2018 - Allowed faster update rate and fixed average pass logging
+    Ver 1.4 - 13th July 2019 - Added altitude in and out of course for each direction and added alarm if too high
 
 --]]
 collectgarbage()
+
 ----------------------------------------------------------------------
 -- Locals for the application
 local label, sens, sensid, senspa, id, param
-local speedsens, speedsensid, speedsenspa, speedid, speedparam
+local speedsens, speedsensid, speedsenspa, speedid, speedparam, altsens, altsensid, altsensparam
+local altid, altparam
 local telem, telemVal
 local result, tvalue, limit
-local toptoflDist,fltocourseDist,courseWidth,courseLength,prestageLength,incourseALM,outcourseALM,outprestageALM,incouseAudio,outcouseAudio,outprestageAudio,averagespeedALM
+local toptoflDist,fltocourseDist,courseWidth,courseAlt,courseLength,prestageLength,incourseALM,outcourseALM,outprestageALM,tooHighAudio,incouseAudio,outcouseAudio,outprestageAudio,averagespeedALM
+
 local sensorLalist = {"..."}
 local sensorIdlist = {"..."}
 local sensorPalist = {"..."}
@@ -30,7 +34,7 @@ local blnoutStage = false
 
 local speedtotal
 local speedcounter
-local maxA, maxB, blnDonePassA -- keeps track of pass in direction a or b (can't do left or right as dont have heading)
+local maxA, maxB, blnDonePassA, maxAalt, maxBalt, maxAaltout, maxBaltout  -- keeps track of pass in direction a or b (can't do left or right as dont have heading)
 local diveEnterCourseHeight
 local avgspeed
 
@@ -40,6 +44,7 @@ local goingout = true
 
 ----------------------------------------------------------------------
 -- Set Dsitances
+-- Pre calculate some value so we dont need to burn CPU cylces each time
 local function setDistances()
   -- do some pythagoras
   tmp = (toptoflDist + fltocourseDist + (courseWidth / 2))
@@ -51,10 +56,20 @@ end
 ----------------------------------------------------------------------
 -- Draw the telemetry windows
 local function printTelemetry()
-    local strAv = string.format("- %dav -", (maxA + maxB)/2.0)
+    local strAv = string.format("- %dav -", (maxA + maxB)/2)
     lcd.drawText(3,0,string.format("%d", maxB),FONT_BIG)
-    lcd.drawText((145 / 2) - (lcd.getTextWidth(FONT_BIG,strAv) / 2.0),0,strAv,FONT_BIG)
+    lcd.drawText(73 - (lcd.getTextWidth(FONT_BIG,strAv) / 2),0,strAv,FONT_BIG) -- 73 is from 152 / 2 and taken to the nearest integer. Save the CPU some time calculating each time
     lcd.drawText(145 - lcd.getTextWidth(FONT_BIG,string.format("%d", maxA)),0,string.format("%d", maxA),FONT_BIG)
+    --alt in
+    lcd.drawText(3,lcd.getTextHeight(FONT_NORMAL) + 4 ,string.format("%d", maxBalt),FONT_NORMAL)
+    lcd.drawText(145 - lcd.getTextWidth(FONT_NORMAL,string.format("%d", maxAalt)),lcd.getTextHeight(FONT_NORMAL) + 4,string.format("%d", maxAalt),FONT_NORMAL)
+    --draw units
+    lcd.drawText(73 - lcd.getTextWidth(FONT_NORMAL,"entry(m)") / 2,lcd.getTextHeight(FONT_NORMAL) + 4,"entry(m)",FONT_NORMAL)
+    lcd.drawText(73 - lcd.getTextWidth(FONT_NORMAL,"exit(m)") / 2,lcd.getTextHeight(FONT_NORMAL) * 2 + 4,"exit(m)",FONT_NORMAL)
+    --alt out
+    lcd.drawText(3,lcd.getTextHeight(FONT_NORMAL) * 2 + 4 ,string.format("%d", maxBaltout),FONT_NORMAL)
+    lcd.drawText(145 - lcd.getTextWidth(FONT_NORMAL,string.format("%d", maxAaltout)),lcd.getTextHeight(FONT_NORMAL) * 2 + 4,string.format("%d", maxAaltout),FONT_NORMAL)
+
 end
 ----------------------------------------------------------------------
 -- Read translations
@@ -94,7 +109,6 @@ local function sensorChanged(value)
 	system.pSave("id", id)
 	system.pSave("param", param)
 end
-
   
 local function speedsensorChanged(value)
   speedsens=value
@@ -114,12 +128,12 @@ local function speedsensorChanged(value)
 end
 
   
-local function altsensorChanged(value)
+local function altitudesensorChanged(value)
   altsens=value
   altsensid=value
   altsenspa=value
-  system.pSave("altsens",value)
-  system.pSave("altsid",value)
+  system.pSave("altsns",value)
+  system.pSave("altsnid",value)
   system.pSave("altsspa",value)
   altid = string.format("%s", sensorIdlist[altsensid])
   altparam = string.format("%s", sensorPalist[altsenspa])
@@ -132,7 +146,6 @@ local function altsensorChanged(value)
 end
 
 
-
 local function toptoflDistChanged(value)
 	if (value == nil) then
 		value = 10
@@ -142,6 +155,13 @@ local function toptoflDistChanged(value)
 	setDistances()
 end
 
+local function courseAltChanged(value)
+  if (value == nil) then
+    value = 35
+  end
+  courseAlt=value
+  system.pSave("courseAlt",value)  
+end
 
 local function fltocourseDistChanged(value)
   if (value == nil) then
@@ -181,8 +201,8 @@ local function prestageLengthChanged(value)
 end
 
 local function incourseALMChanged(value)
-  incourseALM = not value
-  if (value) then
+  incourseALM =  not value
+  if (incourseALM) then
     system.pSave("inALM","True")
   else
     system.pSave("inALM","False")
@@ -191,8 +211,8 @@ local function incourseALMChanged(value)
 end
 
 local function outcourseALMChanged(value)
-  outcourseALM = not value
-  if (value) then
+  outcourseALM =  not value
+  if (outcourseALM) then
     system.pSave("outALM","True")
   else
     system.pSave("outALM","False")
@@ -202,8 +222,8 @@ local function outcourseALMChanged(value)
 end
 
 local function outprestageALMChanged(value)
-  outprestageALM = not value
-  if (value) then
+  outprestageALM =  not value
+  if (outprestageALM) then
     system.pSave("outpALM","True")
   else
     system.pSave("outpALM","False")
@@ -222,6 +242,12 @@ local function outprestageAudioChanged(value)
   system.pSave("outpAudio",outprestageAudio)      
 end
 
+local function tooHighAudioChanged(value)
+  tooHighAudio=value
+  system.pSave("tooHighAudio",tooHighAudio)      
+end
+
+
 
 ----------------------------------------------------------------------
 -- Draw the main form (Application inteface)
@@ -233,6 +259,10 @@ local function initForm(subform)
 		form.addRow(2)
     form.addLabel({label="GPS Speed Sensor",font=FONT_MINI})
     form.addSelectbox(sensorLalist,speedsens,true,speedsensorChanged)
+    
+    form.addRow(2)
+    form.addLabel({label="GPS Altitude Sensor",font=FONT_MINI})
+    form.addSelectbox(sensorLalist,altsens,true,altitudesensorChanged)
 
 		form.addRow(2)
     form.addLabel({label="Takeoff to Flightline",font=FONT_MINI})
@@ -251,6 +281,10 @@ local function initForm(subform)
 		form.addRow(2)
 		form.addLabel({label="Course Length",font=FONT_MINI})
 		form.addIntbox(courseLength,25,200,1,0,1,courseLengthChanged)
+		
+		form.addRow(2)
+    form.addLabel({label="Course Max Alt",font=FONT_MINI})
+    form.addIntbox(courseAlt,5,100,1,0,1,courseAltChanged)
 		
 		form.addRow(2)
     form.addLabel({label="Pre Stage Length",font=FONT_MINI})
@@ -276,6 +310,10 @@ local function initForm(subform)
     form.addLabel({label="Pre-Stage Audio File",font=FONT_MINI})
     form.addAudioFilebox(outprestageAudio, outprestageAudioChanged)
     
+    form.addRow(2)
+    form.addLabel({label="Too High Audio File",font=FONT_MINI})
+    form.addAudioFilebox(tooHighAudio, tooHighAudioChanged)
+    
     form.addRow(1)
     form.addLabel({label="www.mhsfa.org - v."..MHSFAVersion.." ",font=FONT_MINI, alignRight=true})
 
@@ -288,69 +326,104 @@ end
 local function loop()
   local newTime = system.getTimeCounter() 
   local delta = newTime - lastTime 
-  
-  
-	
-	if (delta >= 100) then -- want a 10hz cycle here as not going to get gps fixes any faster and can use this for avg speed
-	   lastTime = newTime
-	   local distsensor = system.getSensorByID(id, param)
-	   local speedsensor = system.getSensorByID(speedid, speedparam)
-	   
-	   --check we have some valid values from all the sensors
-	   if ((distsensor and distsensor.valid) and (speedsensor and speedsensor.valid)) then
-            -- out of pre-stage
-            if (distsensor.value >= preoutDist) then   
-            --if (distsensor >= preoutDist) then
-                if ((outprestageALM) and (blnoutStage == false)) then 
-                    system.playFile(outprestageAudio,AUDIO_BACKGROUND) 
-                    --print("pre-stage")  
-                end
-                blnoutStage = true
-            -- inside pre-stage
-            
-            elseif ((distsensor.value >= outDist) and (distsensor.value < preoutDist)) then
-                if ((outcourseALM) and (blnOutCourse == false)) then
-                    --check we have some values to play the average speed
-                    if ((speedtotal > 0) and (speedcounter > 0)) then 
-                        avgspeed = speedtotal / speedcounter
-                        system.playNumber (avgspeed, 0, "km/h")
-                        --print(avgspeed)
-                        speedcounter = 0
-                        speedtotal = 0   
-                        if (blnDonePassA) then
-                            if (avgspeed > maxA) then maxA = avgspeed end
-                        else
-                            if (avgspeed > maxB) then maxB = avgspeed end
-                        end
-                        blnDonePassA = not blnDonePassA
-                        printTelemetry()
-                    end
-                    
-                    --print("out course")
-                    blnTiming = false
-                    blnOutCourse = true
-                elseif ((blnoutStage) and (blnOutCourse)) then--we are coming back in
-                    system.playFile(outprestageAudio,AUDIO_BACKGROUND) 
-                    --print("into pre-stage")  
-                    blnoutStage = false
-                end
-                
-                
+
+
+
+  if (delta >= 100) then -- want a 10hz cycle here as not going to get gps fixes any faster and can use this for avg speed
+    lastTime = newTime
+    local distsensor = system.getSensorByID(id, param)
+    local speedsensor = system.getSensorByID(speedid, speedparam)
+    local altsensor = system.getSensorByID(altid, altparam)
+    
+    --check we have some valid values from all the sensors
+    if ((distsensor and distsensor.valid) and (speedsensor and speedsensor.valid)) then
+      -- out of pre-stage
+      if (distsensor.value >= preoutDist) then   
+        --if (distsensor >= preoutDist) then
+        if (blnoutStage == false) then 
+          if (altsensor and altsensor.valid) then 
+            if (blnDonePassA) then
+              maxAaltout = altsensor.value
             else
-                --we are in the course
-                if ((incourseALM) and (blnTiming == false)) then 
-                    system.playFile(incouseAudio,AUDIO_IMMEDIATE)
-                    --print("incourse")
-                    blnTiming = true
-                    blnoutStage = false   
-                    blnOutCourse = false
-                end
-        
-                speedcounter = speedcounter + 1
-                speedtotal = speedtotal + speedsensor.value
-                --speedtotal = speedtotal + speedsensor
+              maxBaltout = altsensor.value
             end
-	   end
+          end 
+          if (outprestageALM) then
+            system.playFile(outprestageAudio,AUDIO_BACKGROUND)
+          end 
+          if (altsensor and altsensor.valid) then 
+            if (altsensor.value >=courseAlt) then -- check if we are too high
+                  if (tooHighAudio ~= "") then
+                    system.playFile(tooHighAudio,AUDIO_BACKGROUND) -- we dont need to know immediatelly so can wait for the speed to be announced
+                  end
+            end
+          end
+          --print("pre-stage")  
+        end
+        blnoutStage = true
+        -- inside pre-stage
+
+      elseif ((distsensor.value >= outDist) and (distsensor.value < preoutDist)) then
+        if ((outcourseALM) and (blnOutCourse == false)) then
+          --check we have some values to play the average speed
+          if ((speedtotal > 0) and (speedcounter > 0)) then 
+            avgspeed = speedtotal / speedcounter
+            system.playNumber (avgspeed, 0, "km/h")
+            --print(avgspeed)
+            speedcounter = 0
+            speedtotal = 0   
+            if (blnDonePassA) then
+              if (avgspeed > maxA) then 
+                maxA = avgspeed
+              end
+            else
+              if (avgspeed > maxB) then 
+                maxB = avgspeed 
+              end
+            end
+            
+            blnDonePassA = not blnDonePassA
+            printTelemetry()
+          end
+
+          --print("out course")
+          blnTiming = false
+          blnOutCourse = true
+        elseif ((blnoutStage) and (blnOutCourse)) then--we are coming back in
+          system.playFile(outprestageAudio,AUDIO_BACKGROUND)
+          
+          if (altsensor and altsensor.valid) then 
+              if (altsensor.value >=courseAlt) then -- check if we are too high
+                  if (tooHighAudio ~= "") then
+                    system.playFile(tooHighAudio,AUDIO_BACKGROUND) -- we dont need to know immediatelly so can wait for the speed to be announced
+                  end
+                  if (blnDonePassA) then -- if it says done A then we are coming back into A and vice versa
+                      maxBalt = altsensor.value
+                  else
+                      maxAalt = altsensor.value
+                  end
+              end
+            end
+          --print("into pre-stage")  
+          blnoutStage = false
+        end
+
+
+      else
+        --we are in the course
+        if ((incourseALM) and (blnTiming == false)) then 
+          system.playFile(incouseAudio,AUDIO_IMMEDIATE)
+          --print("incourse")
+          blnTiming = true
+          blnoutStage = false   
+          blnOutCourse = false
+        end
+
+        speedcounter = speedcounter + 1
+        speedtotal = speedtotal + speedsensor.value
+        --speedtotal = speedtotal + speedsensor
+      end
+    end
   end
   --print("Mem: ",collectgarbage("count"))
   collectgarbage()
@@ -360,7 +433,7 @@ end
 ----------------------------------------------------------------------
 -- Application initialization
 local function init()
-	 system.registerForm(1,MENU_APPS,"MHSFA Course",initForm,keyPressed)
+  system.registerForm(1,MENU_APPS,"MHSFA Course",initForm,keyPressed)
 	 
 	sens = system.pLoad("sens",0)
 	sensid = system.pLoad("sensid",0)
@@ -377,15 +450,24 @@ local function init()
   speedid = system.pLoad("spdid",0)
   speedparam = system.pLoad("spdparam",0)
   
+  altsens = system.pLoad("altsns",0)
+  altsensid = system.pLoad("altsnsid",0)
+  altenspa = system.pLoad("altsspa",0)
+  
+  altid = system.pLoad("altid",0)
+  altparam = system.pLoad("altparam",0)
+  
 	toptoflDist = system.pLoad("toptoflDist",10)
 	
+	courseAlt= system.pLoad("courseAlt",35)
+  tooHighAudio = system.pLoad("tooHighAudio","")
 	
 	fltocourseDist = system.pLoad("fltocourseDist",20)
 	courseWidth = system.pLoad("courseWidth",20)
 	courseLength = system.pLoad("courseLength",100)
 	prestageLength = system.pLoad("prestageLength",100)
 	
-	if (system.pLoad("incALM","True") == "True") then
+	if (system.pLoad("inALM","True") == "True") then
 	   incourseALM = true
 	else
 	   incourseALM = false
@@ -405,18 +487,24 @@ local function init()
 	outprestageAudio = system.pLoad("outpAudio","")
 	
 	lastTime = system.getTimeCounter()
-	
-	maxA = 0
-  maxB = 0
   
-	system.registerTelemetry(1,"MHSFA Passes (km/h)",0,printTelemetry)
-	
-	speedtotal  = 0
+  --init variables
+  maxA = 0
+  maxB = 0
+  maxAalt = 0
+  maxBalt = 0
+  maxAaltout = 0
+  maxBaltout = 0
+  speedtotal  = 0
   speedcounter = 0
   blnDonePassA = false 
+	
+  --setup telemetry 
+	system.registerTelemetry(1,"MHSFA Passes (km/h)",2,printTelemetry)
 
 	setDistances()
 	
+  --setup logging
 	system.registerLogVariable("Course Speed","km/h",(
       function(index)
           return avgspeed
@@ -427,11 +515,11 @@ local function init()
           return (maxA + maxB)/2.0
       end) 
   )
+
   
   collectgarbage()
 end
 ----------------------------------------------------------------------
 --setLanguage()
-MHSFAVersion = "1.3"
-collectgarbage()
-return {init=init, loop=loop, author="AlastairC", version="1.3", name="MHSFACourse"}
+MHSFAVersion = "1.4"
+return {init=init, loop=loop, author="AlastairC", version="1.4", name="MHSFACourse"}
