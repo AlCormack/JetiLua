@@ -34,13 +34,14 @@ local blnoutStage = false
 
 local speedtotal
 local speedcounter
-local maxA, maxB, blnDonePassA, maxAalt, maxBalt, maxAaltout, maxBaltout  -- keeps track of pass in direction a or b (can't do left or right as dont have heading)
+local maxA, maxB, blnDonePassA, maxAalt, maxBalt, maxAaltout, maxBaltout, altout,altin  -- keeps track of pass in direction a or b (can't do left or right as dont have heading)
 local diveEnterCourseHeight
 local avgspeed
 
 local tmp
 
 local goingout = true
+local bDisplayAlt = false
 
 ----------------------------------------------------------------------
 -- Set Dsitances
@@ -48,8 +49,8 @@ local goingout = true
 local function setDistances()
   -- do some pythagoras
   tmp = (toptoflDist + fltocourseDist + (courseWidth / 2))
-  outDist = math.sqrt(((tmp * tmp) + ((courseLength / 2) * (courseLength /2))))
-  preoutDist = math.sqrt(((tmp * tmp) + (((courseLength / 2) + prestageLength) * ((courseLength / 2) + prestageLength)))) 
+  outDist = math.sqrt(((tmp * tmp) + ((courseLength) * (courseLength))))
+  preoutDist = math.sqrt(((tmp * tmp) + (((courseLength) + prestageLength) * ((courseLength) + prestageLength)))) 
   --print(preoutDist,outDist)
 end
 
@@ -342,19 +343,17 @@ local function loop()
         --if (distsensor >= preoutDist) then
         if (blnoutStage == false) then 
           if (altsensor and altsensor.valid) then 
-            if (blnDonePassA) then
-              maxAaltout = altsensor.value
-            else
-              maxBaltout = altsensor.value
-            end
+              altout = altsensor.value
           end 
           if (outprestageALM) then
-            system.playFile(outprestageAudio,AUDIO_BACKGROUND)
+            if (outprestageAudio ~= "") then
+              system.playFile(outprestageAudio,AUDIO_QUEUE)
+            end
           end 
           if (altsensor and altsensor.valid) then 
             if (altsensor.value >=courseAlt) then -- check if we are too high
                   if (tooHighAudio ~= "") then
-                    system.playFile(tooHighAudio,AUDIO_BACKGROUND) -- we dont need to know immediatelly so can wait for the speed to be announced
+                    system.playFile(tooHighAudio,AUDIO_QUEUE) -- we dont need to know immediatelly so can wait for the speed to be announced
                   end
             end
           end
@@ -371,7 +370,8 @@ local function loop()
             system.playNumber (avgspeed, 0, "km/h")
             --print(avgspeed)
             speedcounter = 0
-            speedtotal = 0   
+            speedtotal = 0  
+            bDisplayAlt = true
             if (blnDonePassA) then
               if (avgspeed > maxA) then 
                 maxA = avgspeed
@@ -390,18 +390,15 @@ local function loop()
           blnTiming = false
           blnOutCourse = true
         elseif ((blnoutStage) and (blnOutCourse)) then--we are coming back in
-          system.playFile(outprestageAudio,AUDIO_BACKGROUND)
-          
+          if (outprestageAudio ~= "") then
+            system.playFile(outprestageAudio,AUDIO_QUEUE)
+          end
           if (altsensor and altsensor.valid) then 
               if (altsensor.value >=courseAlt) then -- check if we are too high
                   if (tooHighAudio ~= "") then
-                    system.playFile(tooHighAudio,AUDIO_BACKGROUND) -- we dont need to know immediatelly so can wait for the speed to be announced
+                    system.playFile(tooHighAudio,AUDIO_QUEUE) -- we dont need to know immediatelly so can wait for the speed to be announced
                   end
-                  if (blnDonePassA) then -- if it says done A then we are coming back into A and vice versa
-                      maxBalt = altsensor.value
-                  else
-                      maxAalt = altsensor.value
-                  end
+                  altin = altsensor.value
               end
             end
           --print("into pre-stage")  
@@ -412,7 +409,9 @@ local function loop()
       else
         --we are in the course
         if ((incourseALM) and (blnTiming == false)) then 
-          system.playFile(incouseAudio,AUDIO_IMMEDIATE)
+          if (incouseAudio ~= "") then
+            system.playFile(incouseAudio,AUDIO_IMMEDIATE)
+          end
           --print("incourse")
           blnTiming = true
           blnoutStage = false   
@@ -424,6 +423,16 @@ local function loop()
         --speedtotal = speedtotal + speedsensor
       end
     end
+  end
+  if bDisplayAlt then
+    if blnDonePassA then
+      maxBalt = altin
+      maxBaltout = altout
+    else
+      maxAalt = altin
+      maxAaltout = altout
+    end
+    bDisplayAlt = false
   end
   --print("Mem: ",collectgarbage("count"))
   collectgarbage()
@@ -493,6 +502,8 @@ local function init()
   maxB = 0
   maxAalt = 0
   maxBalt = 0
+  altin = 0
+  altout = 0
   maxAaltout = 0
   maxBaltout = 0
   speedtotal  = 0
