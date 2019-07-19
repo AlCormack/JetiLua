@@ -233,31 +233,14 @@ local function outprestageALMChanged(value)
   form.setValue(prestageIndex,outprestageALM)  
 end
 
-local function incouseAudioChanged(value)
-  incouseAudio=value
-  system.pSave("inAudio",incouseAudio)  
-end
-
-local function outprestageAudioChanged(value)
-  outprestageAudio=value
-  system.pSave("outpAudio",outprestageAudio)      
-end
-
-local function tooHighAudioChanged(value)
-  tooHighAudio=value
-  system.pSave("tooHighAudio",tooHighAudio)      
-end
-
-
-
 ----------------------------------------------------------------------
 -- Draw the main form (Application inteface)
 local function initForm(subform)
-		form.addRow(2)
-		form.addLabel({label="GPS Distance Sensor",font=FONT_MINI})
-		form.addSelectbox(sensorLalist,sens,true,sensorChanged)
+    form.addRow(2)
+    form.addLabel({label="GPS Distance Sensor",font=FONT_MINI})
+    form.addSelectbox(sensorLalist,sens,true,sensorChanged)
 		
-		form.addRow(2)
+    form.addRow(2)
     form.addLabel({label="GPS Speed Sensor",font=FONT_MINI})
     form.addSelectbox(sensorLalist,speedsens,true,speedsensorChanged)
     
@@ -265,39 +248,35 @@ local function initForm(subform)
     form.addLabel({label="GPS Altitude Sensor",font=FONT_MINI})
     form.addSelectbox(sensorLalist,altsens,true,altitudesensorChanged)
 
-		form.addRow(2)
+    form.addRow(2)
     form.addLabel({label="Takeoff to Flightline",font=FONT_MINI})
     form.addIntbox(toptoflDist,1,50,1,0,1,toptoflDistChanged)
     
     
-		form.addRow(2)
-		form.addLabel({label="Flightline to Course",font=FONT_MINI})
-		form.addIntbox(fltocourseDist,1,50,1,0,1,fltocourseDistChanged)
+    form.addRow(2)
+    form.addLabel({label="Flightline to Course",font=FONT_MINI})
+    form.addIntbox(fltocourseDist,1,50,1,0,1,fltocourseDistChanged)
 		
-		form.addRow(2)
-		form.addLabel({label="Course Width",font=FONT_MINI})
-		form.addIntbox(courseWidth,10,100,1,0,1,courseWidthChanged)
+    form.addRow(2)
+    form.addLabel({label="Course Width",font=FONT_MINI})
+    form.addIntbox(courseWidth,10,100,1,0,1,courseWidthChanged)
 
 		
-		form.addRow(2)
-		form.addLabel({label="Course Length",font=FONT_MINI})
-		form.addIntbox(courseLength,25,200,1,0,1,courseLengthChanged)
+    form.addRow(2)
+    form.addLabel({label="Course Length",font=FONT_MINI})
+    form.addIntbox(courseLength,25,200,1,0,1,courseLengthChanged)
 		
-		form.addRow(2)
+    form.addRow(2)
     form.addLabel({label="Course Max Alt",font=FONT_MINI})
     form.addIntbox(courseAlt,5,100,1,0,1,courseAltChanged)
 		
-		form.addRow(2)
+    form.addRow(2)
     form.addLabel({label="Pre Stage Length",font=FONT_MINI})
     form.addIntbox(prestageLength,25,200,1,0,1,prestageLengthChanged)
 
-		form.addRow(2)
+    form.addRow(2)
     form.addLabel({label="In Course Alarm",font=FONT_MINI,width=270})
     incourseIndex = form.addCheckbox(incourseALM,incourseALMChanged)
-    
-    form.addRow(2)
-    form.addLabel({label="In Course Audio File",font=FONT_MINI})
-    form.addAudioFilebox(incouseAudio, incouseAudioChanged)
     
     form.addRow(2)
     form.addLabel({label="Out Course Alarm",font=FONT_MINI,width=270})
@@ -306,14 +285,6 @@ local function initForm(subform)
     form.addRow(2)
     form.addLabel({label="Pre-Stage Alarm",font=FONT_MINI,width=270})
     prestageIndex = form.addCheckbox(outprestageALM,outprestageALMChanged)
-    
-    form.addRow(2)
-    form.addLabel({label="Pre-Stage Audio File",font=FONT_MINI})
-    form.addAudioFilebox(outprestageAudio, outprestageAudioChanged)
-    
-    form.addRow(2)
-    form.addLabel({label="Too High Audio File",font=FONT_MINI})
-    form.addAudioFilebox(tooHighAudio, tooHighAudioChanged)
     
     form.addRow(1)
     form.addLabel({label="www.mhsfa.org - v."..MHSFAVersion.." ",font=FONT_MINI, alignRight=true})
@@ -390,16 +361,17 @@ local function loop()
           blnTiming = false
           blnOutCourse = true
         elseif ((blnoutStage) and (blnOutCourse)) then--we are coming back in
-          if (outprestageAudio ~= "") then
-            system.playFile(outprestageAudio,AUDIO_QUEUE)
-          end
+          --if (outprestageAudio ~= "") then
+          --  system.playFile(outprestageAudio,AUDIO_QUEUE)
+          --end
           if (altsensor and altsensor.valid) then 
               if (altsensor.value >=courseAlt) then -- check if we are too high
                   if (tooHighAudio ~= "") then
                     system.playFile(tooHighAudio,AUDIO_QUEUE) -- we dont need to know immediatelly so can wait for the speed to be announced
                   end
-                  altin = altsensor.value
+                  
               end
+              altin = altsensor.value
             end
           --print("into pre-stage")  
           blnoutStage = false
@@ -469,7 +441,7 @@ local function init()
 	toptoflDist = system.pLoad("toptoflDist",10)
 	
 	courseAlt= system.pLoad("courseAlt",35)
-  tooHighAudio = system.pLoad("tooHighAudio","")
+  
 	
 	fltocourseDist = system.pLoad("fltocourseDist",20)
 	courseWidth = system.pLoad("courseWidth",20)
@@ -491,9 +463,9 @@ local function init()
   else
      outprestageALM = false
   end
-	
-	incouseAudio = system.pLoad("inAudio","")
-	outprestageAudio = system.pLoad("outpAudio","")
+	incouseAudio = "/Apps/MHSFACrse/incourse.wav"
+	outprestageAudio = "/Apps/MHSFACrse/outcourse.wav"
+	tooHighAudio = "/Apps/MHSFACrse/toohigh.wav" 
 	
 	lastTime = system.getTimeCounter()
   
