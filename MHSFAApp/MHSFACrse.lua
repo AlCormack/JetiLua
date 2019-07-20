@@ -315,6 +315,7 @@ local function loop()
         if (blnoutStage == false) then 
           if (altsensor and altsensor.valid) then 
               altout = altsensor.value
+              bDisplayAlt = true
           end 
           if (outprestageALM) then
             if (outprestageAudio ~= "") then
@@ -326,7 +327,9 @@ local function loop()
                   if (tooHighAudio ~= "") then
                     system.playFile(tooHighAudio,AUDIO_QUEUE) -- we dont need to know immediatelly so can wait for the speed to be announced
                   end
+                  
             end
+            
           end
           --print("pre-stage")  
         end
@@ -342,7 +345,7 @@ local function loop()
             --print(avgspeed)
             speedcounter = 0
             speedtotal = 0  
-            bDisplayAlt = true
+            
             if (blnDonePassA) then
               if (avgspeed > maxA) then 
                 maxA = avgspeed
@@ -396,7 +399,7 @@ local function loop()
       end
     end
   end
-  if bDisplayAlt then
+  if (bDisplayAlt and (speedtotal == 0)) then  --we are out the stage so can update the altitude and as speedtotal is zero we have a new top speed on that pass
     if blnDonePassA then
       maxBalt = altin
       maxBaltout = altout
