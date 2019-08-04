@@ -6,6 +6,8 @@
 	Based on Percentage application that is part of RC-Thoughts Jeti Tools.
 	
 	14th Oct 2017 - Rev 1.2 - Added logging support - Alastair.Cormack @ gmail.com
+	1st Apr 2018 - Rev 1.3 - Changed logging to use new Lua API
+  21 Jul 2019 - Rev 1.4 - Changed Compiler adn help file layout
 	---------------------------------------------------------
 	Based on code by Tero @ RC-Thoughts.com 2016
 	---------------------------------------------------------
@@ -20,11 +22,8 @@ local ratio
 local sensorLalist = {"..."}
 local sensorIdlist = {"..."}
 local sensorPalist = {"..."}
-local switch,switchHold
+local switch
 local result = 0
-local fileName = ""
-local lastTime,startTime
-local bFileCreated = false
 ----------------------------------------------------------------------
 -- Read translations
 local function setLanguage()
@@ -110,11 +109,6 @@ local function switchChanged(value)
   switch=value
   system.pSave("switch",value)
 end
-
-local function switchHoldChanged(value)
-  switchHold=value
-  system.pSave("switchHold",value)
-end
 ----------------------------------------------------------------------
 -- Draw the main form (Application inteface)
 local function initForm(subform)
@@ -139,14 +133,9 @@ local function initForm(subform)
 	form.addIntbox(poles,1,60,1,0,1,polesChanged)
 	
 	form.addRow(2)
-    form.addLabel({label="Read RPM"})
-    form.addInputbox(switch,true,switchChanged)
+  form.addLabel({label="Read RPM"})
+  form.addInputbox(switch,true,switchChanged)
     
-    form.addRow(2)
-    form.addLabel({label="Hold Switch Off"})
-    form.addInputbox(switchHold,true,switchHoldChanged)
-		
-
     collectgarbage()
 end
 ----------------------------------------------------------------------
@@ -155,56 +144,16 @@ end
 -- Runtime functions, read sensor
 local function loop()
   local val = system.getInputsVal(switch)
-  local valHold = system.getInputsVal(switchHold)
 	local sensor = system.getSensorByID(id, param)
 	local newTime = system.getTimeCounter() 
-	local delta = newTime - lastTime 
+  local delta = newTime - lastTime 
+
 	
 	if (delta >= 500) then -- want a 2hz cycle here 
 	   if(sensor and sensor.valid) then
             result = sensor.value / ratio
-       --if(true) then
-            --result = math.random(4000)
-            telemVal = result
-             
-            if (valHold and valHold > 0) then
-                if (bFileCreated == false) then
-                 
-                     local dt = system.getDateTime() 
-                     startTime = system.getTimeCounter()
-                     fileName = string.format("/Log/%d%02d%02d/%02d-%02d-%02d.log",dt.year,dt.mon,dt.day,dt.hour,dt.min,dt.sec)
-					 
-					 --just for safety lets check we dont already have a log file names this (the main log for the flight might have the same timestamp and we dont want to overwrite or mess with this)
-					 f = io.open(fileName,"r")
-					 if(f == nil) then  --we dont have an existing file.. so we are good.. now just create one
-						f = io.open(fileName,"a")  
-					 else --we already have one. this is not good to keep on using it. so close it and set the pointer to nil and let the loop run again. We will get another second later in 2 loops max and then be able to write
-						io.close(f)
-						f = nil
-					 end
-                     if(f) then 
-                            bFileCreated = true   
-                            io.write(f, "# Headspeed\n") 
-                            io.write(f, "000000000;4201425130;0;Headspeed;\n000000000;4201425130;1;Headspeed;RPM\n")    
-                            io.close(f)  
-                     end 
-                end
-			if (bFileCreated) then
-				f = io.open(fileName,"a")  
-    
-              	 	if(f) then     
-                    		io.write(f, string.format("%09d;4201425130;1;4;0;%d\n",newTime-startTime,result))         
-                    		io.close(f)       
-               		end 
-
-			end  
-          
-               
-            else
-                bFileCreated = false
-            end
-           
-      else
+            telemVal = result 
+     else
         telemVal = "-"
 	   end
 	
@@ -212,7 +161,7 @@ local function loop()
 	       system.playNumber (result, 0,"","Revolution") 
 	   end
      collectgarbage()
-    end
+   end
 end
 ----------------------------------------------------------------------
 -- Application initialization
@@ -230,15 +179,20 @@ local function init()
 	id = system.pLoad("id",0)
 	param = system.pLoad("param",0)
 	switch = system.pLoad("switch")
-	switchHold = system.pLoad("switchHold")
 	telemVal = "-"
 	system.registerTelemetry(1,"Headspeed",0,printTelemetry)
 	
 	setRatio()
 	
-    collectgarbage()
+	system.registerLogVariable("Headspeed","RPM",(
+      function(index)
+          return result
+      end) 
+  )
+	
+  collectgarbage()
 end
 ----------------------------------------------------------------------
 --setLanguage()
 collectgarbage()
-return {init=init, loop=loop, author="AlastairC", version="1.2", name="RPM to Headspeed"}
+return {init=init, loop=loop, author="AlastairC", version="1.4", name="RPM to Headspeed"}
