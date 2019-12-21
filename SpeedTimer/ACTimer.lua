@@ -2,12 +2,15 @@
 	---------------------------------------------------------
     Timer for Speed Application.
 
+    Special thanks to Charles Booker for input with this application
 	---------------------------------------------------------
 	
 	30th Nov 2019 - Initial Version
 	---------------------------------------------------------
 	(C) Alastair Cormack 2019
 	---------------------------------------------------------
+	Revision 1.1 - 21st December 2019 - Added audio support for each button click.Fixed Logging and added pass time logging.  
+	               Special thanks to Charles Booker for the input
 --]]
 collectgarbage()
 ----------------------------------------------------------------------
@@ -27,7 +30,7 @@ local brTimerStarted = false
 local lButtonHeldDown = 1
 local rButtonHeldDown = 1
 
-local switch
+local switch, buttonSND, buttonLeft, buttonRight
 
 local startTime = 0
 local lTime = 0
@@ -39,7 +42,8 @@ local passDir = {"-","-","-","-","-","-","-","-","-","-","-"}
 local passTime = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}
 local passSpeedTotal = 0
 local passFastest = 0
-local speedLogResult = 0
+local speedLogResult = 0.0
+local timeLogResult = 0.0
 
 local sensorLalist = {"..."}
 local sensorIdlist = {"..."}
@@ -90,7 +94,10 @@ local function printTelemetry()
       if (val <= curPassNum) then
           csaverage = csaverage + cspeed
           ctaverage = ctaverage + passTime[val]
-          speedLogResult = cspeed
+          if (val == (curPassNum - 1)) then 
+            speedLogResult = cspeed
+            timeLogResult = passTime[val]
+          end
           if (cspeed > csbest) then 
             csbest = cspeed
             ctbest = passTime[val]
@@ -162,6 +169,15 @@ local function clChanged(value)
 	system.pSave("clength",value)
 end
 
+local function buttonSNDChanged(value)
+  buttonSND =  not value
+  if (buttonSND) then
+    system.pSave("buttonSND","True")
+  else
+    system.pSave("buttonSND","False")
+  end
+  form.setValue(buttonSound,buttonSND)  
+end
 
 ----------------------------------------------------------------------
 -- Draw the main form (Application inteface)
@@ -182,8 +198,14 @@ local function initForm(subform)
   form.addLabel({label="Reset Switch"})
   form.addInputbox(switch,true,switchChanged)
   
+  form.addRow(2)
+  form.addLabel({label="Button Click Sounds",width=270})
+  buttonSound = form.addCheckbox(buttonSND,buttonSNDChanged)
+    
   form.addRow(1)
   form.addLabel({label="AlastairC - Speed Timer - v."..SpeedTimerVersion.." ",font=FONT_MINI, alignRight=true})
+  form.addRow(1)
+  form.addLabel({label="Special thanks to Charles Booker for his input",font=FONT_MINI, alignRight=true})
 
   collectgarbage()
 end
@@ -251,11 +273,17 @@ local function loop()
              passDir[curPassNum] = "R"
              passTime[curPassNum] = rTime 
              curPassNum = curPassNum + 1
+             if (buttonSND) then --end
+                system.playFile(buttonLeft,AUDIO_IMMEDIATE)
+             end
 	     else
 	       if (blTimerStarted ==false) then
 	         lTime = 0.0
 	         startTime = system.getTimeCounter() 
 	         blTimerStarted = true
+	         if (buttonSND) then
+	           system.playFile(buttonLeft,AUDIO_IMMEDIATE)
+	         end
 	       end
 	     end
 	   elseif  (rButtonPressed == 0) then
@@ -264,11 +292,17 @@ local function loop()
 	           passDir[curPassNum] = "L"
              passTime[curPassNum] = lTime 
 	           curPassNum = curPassNum + 1
+	           if (buttonSND) then --end
+                system.playFile(buttonRight,AUDIO_IMMEDIATE)
+             end
 	     else
 	       if (brTimerStarted ==false) then
 	         rTime = 0.0
 	         startTime = system.getTimeCounter() 
            brTimerStarted = true
+           if (buttonSND) then
+             system.playFile(buttonRight,AUDIO_IMMEDIATE)
+           end
          end
 	     end
 	   end
@@ -313,16 +347,28 @@ local function init()
   paramr = system.pLoad("paramr",0)
   
   switch = system.pLoad("switch")
+  
+  if (system.pLoad("buttonSND","True") == "True") then
+     buttonSND = true
+  else
+     buttonSND = false
+  end
 	
-	system.registerLogVariable("Speed Timer","kph",(
+	system.registerLogVariable("ACTimer-Speed","kph",(
       function(index)
           return speedLogResult
       end) 
   )
-	
+  system.registerLogVariable("ACTimer-Time","ms",(
+      function(index)
+          return (timeLogResult * 1000)
+      end) 
+  )
+	buttonLeft = "/Apps/ACTimer/lGate.wav"
+  buttonRight = "/Apps/ACTimer/rGate.wav"
   collectgarbage()
 end
 ----------------------------------------------------------------------
-SpeedTimerVersion = "1.0"
+SpeedTimerVersion = "1.1"
 collectgarbage()
-return {init=init, loop=loop, author="AlastairC", version="1.0", name="ACTimer"}
+return {init=init, loop=loop, author="AlastairC", version="1.1", name="ACTimer"}
