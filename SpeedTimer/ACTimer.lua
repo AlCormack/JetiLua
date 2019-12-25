@@ -64,6 +64,63 @@ end
 local function setLanguage()
 
 end
+
+
+local function writeResults()
+    local f
+    if (curPassNum >1) then
+        local dt = system.getDateTime() 
+        fileName = string.format("/Log/%d%02d%02d/SpeedTimer-%02d-%02d-%02d.txt",dt.year,dt.mon,dt.day,dt.hour,dt.min,dt.sec)
+        dirName = string.format("/Log/%d%02d%02d",dt.year,dt.mon,dt.day)
+        io.mkdir (dirName)
+        --just for safety lets check we dont already have a log file names
+        f = io.open(fileName,"r")
+        if(f == nil) then  --we dont have an existing file.. so we are good.. now just create one
+           f = io.open(fileName,"a")  
+           
+           io.write(f, "Speed Course Timer by AlastairC\nResults\n\n")
+           io.write(f, "Course Length:"..clength.."\n\n")
+           io.write(f,string.format("Average\n"))
+           io.write(f,string.format("Speed: %.2f kph\n",csaverage))
+           io.write(f,string.format("Time: %.2f s\n\n",ctaverage))
+           io.write(f, string.format("Best\n"))
+           io.write(f, string.format("Speed: %.2f kph\n",csbest))
+           io.write(f, string.format("Time: %.2f s\n\n\n",ctbest))
+             
+           io.write(f,"#\tDir\tSpeed(kph)\tTime(s)\n")
+           for val = 1, (curPassNum -1) do
+              io.write(f,""..passNum[val].."\t")
+              io.write(f,""..passDir[val].."\t")
+              if passTime[val] > 0.0 then
+                  cspeed = (clength / 1000.0) / ((passTime[val] / 60.0) /60.0)
+              else
+                  cspeed = 0
+              end
+              io.write(f,string.format("%.2f\t\t",cspeed))
+              io.write(f,string.format("%.2f\n",passTime[val]))
+           end
+           io.close(f)    
+        else --we already have one.
+           io.close(f)
+           f = nil
+        end
+    end
+    curPassNum = 1
+    passDir = {"-","-","-","-","-","-","-","-","-","-","-"}
+    passTime = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}
+    passSpeedTotal = 0
+    passFastest = 0
+    brTimerStarted = false
+    blTimerStarted = false
+    lTime = 0
+    rTime = 0
+    lButtonPressed = 1
+    rButtonPressed = 1
+    lButtonHeldDown = 1
+    rButtonHeldDown = 1
+end
+
+
 ----------------------------------------------------------------------
 -- Draw the telemetry windows
 local function printTelemetry()
@@ -195,7 +252,7 @@ local function initForm(subform)
   form.addSelectbox(sensorLalist,sensr,true,sensorRightChanged)
   
   form.addRow(2)
-  form.addLabel({label="Reset Switch"})
+  form.addLabel({label="Store Log and Reset"})
   form.addInputbox(switch,true,switchChanged)
   
   form.addRow(2)
@@ -224,15 +281,7 @@ local function loop()
   lButtonPressed=1
   rButtonPressed=1
   if (val and val>0) then -- reset has been clicked so resent everything
-    curPassNum = 1
-    passDir = {"-","-","-","-","-","-","-","-","-","-","-"}
-    passTime = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}
-    passSpeedTotal = 0
-    passFastest = 0
-    brTimerStarted = false
-    blTimerStarted = false
-    lTime = 0
-    rTime = 0
+    writeResults()
   end
 	
 	if (delta >= 50) then -- want a 20hz cycle here 
@@ -315,13 +364,16 @@ local function loop()
 	   
 	   --if we have more than 10 then loop back to the beginning. In the future could make 1 become 11 and repeat through the list.
 	   if (curPassNum > 10) then
-	     curPassNum = 1
+	     writeResults()
+	     --curPassNum = 1
 	   end
 	   
 	   printTelemetry()
      collectgarbage()
    end
 end
+
+
 ----------------------------------------------------------------------
 -- Application initialization
 local function init()
