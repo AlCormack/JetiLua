@@ -16,3 +16,11 @@ RPMHead
 ------
 ![alt text](https://github.com/AlCormack/JetiLua/blob/master/images/HeadspeedGraph.bmp "MHSFAApp")
 Some ESC’s don't output head speed and only output motor RPM. This app lets you enter the motor poles and gear ratio. The main gear has a decimal input to allow calculation for two-stage drive like the Gaui R5. The application will also optionally speak out the head speed continually when a user- defined switch is active. The final new feature is to write a log file in the same format as the jeti logs. This enables review of the head speed in the Data Analyser application.
+
+SpeedTimer
+------
+![alt text](https://github.com/AlCormack/JetiLua/blob/master/images/SpeedTimer.bmp "SpeedTimer")
+This application lets you measure how fast your clubs planes/helis are through a fixed length course. All you need are two receivers (one for each station at each end of the course), a simple push button switch to go into each receiver, and a battery for each receiver.
+Further details of a typical speed course for helis can be found at:[MHSFA Course](https://www.mhsfa.org/the-course)
+
+File for 3D printing 16mm button holder for the push button can be at: [Push Button](https://www.thingiverse.com/thing:4028005)
